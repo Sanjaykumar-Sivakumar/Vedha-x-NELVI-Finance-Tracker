@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07140e">
+<title>Vedha x NELVI Finance Tracker</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="toast" class="toast"></div>
+
+<!-- LOGIN -->
+<section id="setupView" class="setup-view hidden">
+<div class="setup-card">
+<img src="assets/nelvi-vedha-logo.png" class="setup-logo" alt="Vedha Exim NELVI">
+<div class="eyebrow">FIRST-TIME CONNECTION</div>
+<h1>Connect Google Sheets</h1>
+<p>Connect once. Your connection details are saved in this browser; financial records remain in Google Sheets.</p>
+<label>Google Apps Script Web App URL<input id="scriptUrl" placeholder="https://script.google.com/macros/s/…/exec"></label>
+<label>Spreadsheet ID<input id="spreadsheetId" placeholder="Your Google Sheet ID"></label>
+<button class="primary-btn" id="saveConfig">Save connection & continue →</button>
+<div id="setupError" class="connection-error" role="status" aria-live="polite"></div>
+<div class="setup-note"><b>Why:</b> every transaction and audit event is written to your Google Sheet through Apps Script.</div>
+</div></section>
+
+<section id="loginView" class="login-view">
+  <div class="login-glow glow-a"></div><div class="login-glow glow-b"></div>
+  <div class="login-shell">
+    <div class="login-brand">
+      <img src="assets/nelvi-vedha-logo.png" alt="Vedha Exim and NELVI">
+    </div>
+    <div class="login-card">
+      <div class="eyebrow">VEDHA EXIM · NELVI</div>
+      <h1>Finance Control</h1>
+      <p class="lead">A transparent, protected workspace for company funds and spending.</p>
+
+      <form id="loginForm" class="login-form">
+        <label>Common Access Key
+          <div class="input-wrap"><span>⌘</span><input id="accessKey" type="password" autocomplete="off" placeholder="Enter access key" required><button class="visibility-toggle" type="button" data-toggle-visibility="accessKey" aria-label="Show access key" aria-pressed="false">Show</button></div>
+        </label>
+        <label>Team Member
+          <select id="memberSelect" required disabled><option value="">Loading team members…</option></select>
+        </label>
+        <label>Personal PIN
+          <div class="input-wrap"><span>••</span><input id="pin" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password" placeholder="Enter PIN" required><button class="visibility-toggle" type="button" data-toggle-visibility="pin" aria-label="Show PIN" aria-pressed="false">Show</button></div>
+        </label>
+        <button class="primary-btn" type="submit">Sign in securely <span>→</span></button>
+        <div id="loginError" class="connection-error" role="status" aria-live="polite"></div>
+        <button class="connection-link" id="changeConnection" type="button">Change Google Sheets connection</button>
+      </form>
+
+      <div class="login-trust">
+        <span class="shield">✓</span>
+        <div><strong>Ownership controls · Team transparency</strong><small>Company records are visible to signed-in team members. Server-side rules protect transaction ownership and admin review.</small></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- APP -->
+<section id="appView" class="app-view hidden">
+  <aside class="sidebar">
+    <div class="brand-lockup"><img src="assets/nelvi-vedha-logo.png" alt=""><div><b>Vedha x NELVI</b><small>Finance Tracker</small></div></div>
+    <nav aria-label="Main navigation">
+      <button class="nav active" data-page="dashboard"><span>⌂</span> Overview</button>
+      <button class="nav" data-page="quick"><span>＋</span> Quick Entry</button>
+      <button class="nav" data-page="transactions"><span>▤</span> Transactions</button>
+      <button class="nav" data-page="team"><span>♙</span> Team Profiles</button>
+      <button class="nav" data-page="reports"><span>◒</span> Reports</button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="current-user"><div class="avatar" id="avatar">F</div><div><strong id="currentName">Founder</strong><small id="currentRole">Founder</small></div></div>
+      <button id="logout" class="logout">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div><div class="eyebrow">FINANCE TRACKER </div><h2 id="pageTitle">Overview</h2></div>
+      <div class="top-right"><span id="syncStatus" class="sync-status" role="status" aria-live="polite">Not synced</span><button class="secondary-btn sync-button" id="syncNow" type="button" title="Fetch the latest Google Sheets data">↻ Sync now</button><div class="live"><i></i> Connected workspace</div><button class="round-add" id="topAdd" aria-label="Add transaction">＋</button></div>
+    </header>
+    <div id="content"></div>
+  </main>
+</section>
+
+<template id="dashboardTpl">
+<div class="page">
+  <div class="welcome"><div><div class="eyebrow">FINANCIAL COMMAND CENTER</div><h1>Good to see you, <span id="welcomeName">Founder</span>.</h1><p>One clear view of company funds, spending and team contributions.</p></div><button class="primary-btn compact" data-page="quick">＋ Add transaction</button></div>
+  <div class="kpis">
+    <article><div class="kpi-icon green">₹</div><span>Total verified funds</span><strong id="kIn">₹0</strong><small>Company money received</small></article>
+    <article><div class="kpi-icon red">↘</div><span>Total company spending</span><strong id="kOut">₹0</strong><small>Recorded company expenses</small></article>
+    <article><div class="kpi-icon navy">=</div><span>Current net position</span><strong id="kNet">₹0</strong><small>Verified funds − spending</small></article>
+    <article><div class="kpi-icon gold">!</div><span>Pending review</span><strong id="kPending">0</strong><small>Awaiting finance verification</small></article>
+  </div>
+
+  <div class="grid-2">
+    <section class="panel"><div class="panel-head"><div><h3>Money movement</h3><p>Last 6 months · inflow vs spending</p></div><span class="chart-key"><i class="key-in"></i>In <i class="key-out"></i>Out</span></div><div id="barChart" class="bar-chart"></div></section>
+    <section class="panel"><div class="panel-head"><div><h3>Spending mix</h3><p>Where company money is going</p></div></div><div id="donut" class="donut-area"></div></section>
+  </div>
+
+  <div class="grid-2 bottom-grid">
+    <section class="panel"><div class="panel-head"><div><h3>Team contribution</h3><p>Transparent · verified contributions only</p></div><button class="text-btn" data-page="team">View all →</button></div><div id="dashRanking" class="rank-list"></div></section>
+    <section class="panel"><div class="panel-head"><div><h3>Recent activity</h3><p>Latest company finance events</p></div><button class="text-btn" data-page="transactions">Open register →</button></div><div id="recent" class="activity-list"></div></section>
+  </div>
+</div>
+</template>
+
+<template id="quickTpl">
+<div class="page narrow">
+  <div class="section-title"><div class="eyebrow">FAST · SIMPLE · AUDITABLE</div><h1>Quick transaction entry</h1><p>Enter it like a message. The system structures it for you. Review every field before saving; the record is not submitted until you attach proof.</p></div>
+  <section class="entry-card">
+    <div class="entry-tabs"><button class="entry-tab active" data-entry="message">Message entry</button><button class="entry-tab" data-entry="form">Detailed form</button></div>
+
+    <div class="instruction-panel inline-help">
+<div class="instruction-head"><div class="instruction-icon">✦</div><div><h3>How should I write the message?</h3><p>Use the example below and replace the bracketed values.</p></div></div>
+<div class="example-box">Today's spending for the company - <b>[TYPE]</b> - <b>₹[AMOUNT]</b> - <b>[PURPOSE]</b> - <b>[PAYMENT METHOD]</b> - <b>[TRANSACTION ID]</b></div>
+<div class="micro-notes"><span><b>Why:</b> helps the system understand and structure the transaction.</span><span><b>Required:</b> amount, purpose, payment proof and reference.</span></div>
+</div>
+<div id="messageEntry">
+      <div class="message-help">
+        <div class="help-icon">✦</div><div><strong>Paste the team message</strong><p>Example: <b>Today's spending for the company - Raw Material - ₹15000 - turmeric purchase - UPI - UTR12345</b></p></div>
+      </div>
+      <textarea id="smartMessage" placeholder="Today's spending for the company - Raw Material - ₹15000 - turmeric purchase - UPI - UTR12345"></textarea>
+      <div class="parser-row"><button class="secondary-btn" id="parseMessage">Understand & preview</button><span>We extract amount, purpose, category, payment method and reference.</span></div>
+      <div id="parsePreview" class="parse-preview hidden"></div>
+    </div>
+
+    <div id="formEntry" class="hidden">
+      <div class="form-note"><b>Why this form?</b> Use it when the message parser needs clarification or when you want full control over every field.</div><form id="txForm" class="form-grid">
+        <div class="type-toggle full"><label><input type="radio" name="type" value="inflow" checked><span>Money In · Investment</span></label><label><input type="radio" name="type" value="outflow"><span>Money Out · Company Spending</span></label></div>
+        <label>Amount (₹) *<input id="fAmount" type="number" min="1" step="0.01" required></label>
+        <label>Date *<input id="fDate" type="date" required></label>
+        <label>Category *<select id="fCategory"><option>Capital / Investment</option><option>Raw Material</option><option>Product Purchase</option><option>Office / Electricity</option><option>Travel / Logistics</option><option>Marketing</option><option>Packaging</option><option>Salary / Partner Expense</option><option>Other</option></select></label>
+        <label>Payment Method<select id="fMethod"><option>UPI</option><option>Bank Transfer</option><option>Cash</option><option>Card</option><option>Other</option></select></label>
+        <label class="full">Purpose / Message *<input id="fPurpose" required placeholder="What was this money for?"></label>
+        <label class="full">Transaction / UTR ID *<input id="fRef" required maxlength="120" placeholder="Enter UTR / transfer / receipt reference"></label>
+        <label class="full">Payment proof *<input id="fProof" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required></label>
+        <div class="form-note full">Your member identity is automatically attached. You cannot create a transaction for another team member.</div>
+        <button class="primary-btn full" type="submit">Submit for verification →</button>
+      </form>
+    </div>
+  </section>
+</div>
+</template>
+
+<template id="transactionsTpl">
+<div class="page">
+  <div class="section-title row"><div><div class="eyebrow">AUDIT REGISTER</div><h1>Transactions</h1><p>Every financial event, one transparent record.</p></div><button class="secondary-btn" id="exportExcel">Export Excel (.xls)</button></div>
+  <div class="notice">👁 <b>Transparent to the team.</b> Everyone can view amounts, purpose, owner and status. <b>Protected ownership.</b> Members can only manage their own transactions.</div>
+  <section class="panel"><div class="filters"><input id="q" aria-label="Search transactions" placeholder="Search ID, member, purpose..."><select id="ft" aria-label="Filter by type"><option value="">All types</option><option value="inflow">Money In</option><option value="outflow">Money Out</option></select><select id="fs" aria-label="Filter by status"><option value="">All status</option><option>Pending</option><option>Verified</option><option>Rejected</option></select><input id="fdFrom" type="date" aria-label="From date" title="From date"><input id="fdTo" type="date" aria-label="To date" title="To date"><select id="fc" aria-label="Filter by category"><option value="">All categories</option></select><select id="fm" aria-label="Filter by team member"><option value="">All members</option></select><button id="resetFilters" type="button" class="secondary-btn">Reset filters</button></div><div id="txTable" class="table-wrap"></div></section>
+</div>
+</template>
+
+<template id="teamTpl">
+<div class="page">
+  <div class="section-title row"><div><div class="eyebrow">PEOPLE · TRANSPARENCY · OWNERSHIP</div><h1>Team Profiles</h1><p>Everyone sees the same financial picture. Ownership stays protected.</p></div><button class="primary-btn compact" id="addMember">＋ Add profile</button></div>
+  <div class="team-rule"><div><b>Everyone can see</b><span>Contribution totals · ranking · transaction owner · amount · purpose · status</span></div><div><b>Only the owner can manage</b><span>Edit/delete own entries · nobody can create on another member's behalf</span></div><div><b>Finance Admin</b><span>Verify / reject transactions · manage team profiles</span></div></div>
+  <section class="panel"><div class="panel-head"><div><h3>Contribution leaderboard</h3><p>Ranked by verified investment</p></div></div><div id="teamRanking" class="team-ranking"></div></section>
+  <section class="profile-grid" id="profiles"></section>
+</div>
+</template>
+
+<template id="profileTpl">
+<div class="page">
+  <button class="back-btn" data-page="team">← Team Profiles</button>
+  <div class="profile-hero"><div class="big-avatar" id="pAvatar">F</div><div><div class="eyebrow">TEAM MEMBER PROFILE</div><h1 id="pName"></h1><p id="pRole"></p></div><div class="rank-badge" id="pRank"></div></div>
+  <div class="kpis" id="profileKpis"></div>
+  <div class="grid-2"><section class="panel"><div class="panel-head"><div><h3>Investment history</h3><p>Transparent record</p></div></div><div id="pIn"></div></section><section class="panel"><div class="panel-head"><div><h3>Company spending</h3><p>Paid on behalf of the company</p></div></div><div id="pOut"></div></section></div>
+</div>
+</template>
+
+<template id="reportsTpl">
+<div class="page"><div class="section-title"><div class="eyebrow">MANAGEMENT VIEW</div><h1>Reports</h1><p>Decision-ready finance summaries. Totals include verified transactions only.</p></div><div class="report-filters"><label>From<input id="reportFrom" type="date"></label><label>To<input id="reportTo" type="date"></label><button id="clearReportFilters" class="secondary-btn" type="button">Reset dates</button></div><div id="reportKpis" class="kpis"></div><div class="grid-2"><section class="panel"><div class="panel-head"><div><h3>Category spending</h3><p>Verified company outflows in the selected period</p></div></div><div id="catReport"></div></section><section class="panel"><div class="panel-head"><div><h3>Member contribution</h3><p>Verified funds in the selected period</p></div></div><div id="memberReport"></div></section></div></div>
+</template>
+
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="memberModalTitle"><div class="modal-card"><button class="modal-close" id="closeModal" type="button" aria-label="Close profile dialog">×</button><div class="eyebrow">TEAM PROFILE</div><h2 id="memberModalTitle">Create a profile</h2><p>Finance Admin only. Use a unique PIN and share it privately.</p><form id="memberForm" class="form-grid"><label>Name *<input id="mName" required maxlength="100" autocomplete="off"></label><label>Role *<select id="mRole"><option>Founder</option><option>Co-Founder</option><option>Investor</option><option>Working Partner</option><option>Funder</option><option>Finance Admin</option></select></label><label>Member ID *<input id="mId" required maxlength="24" pattern="[A-Za-z0-9_-]{2,24}" placeholder="INV002" autocomplete="off"></label><label>Personal PIN *<input id="mPin" required inputmode="numeric" maxlength="8" minlength="4" pattern="[0-9]{4,8}" autocomplete="new-password"></label><button class="primary-btn full" type="submit">Create profile →</button></form></div></div>
+
+<div id="editModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="editModalTitle"><div class="modal-card"><button class="modal-close" id="closeEditModal" type="button" aria-label="Close edit transaction dialog">×</button><div class="eyebrow">FINANCE REGISTER</div><h2 id="editModalTitle">Edit transaction</h2><p>Changes return the entry to Pending so Finance Admin can review it again. Proof file and ownership cannot be changed here.</p><form id="editForm" class="form-grid"><input id="eTransactionId" type="hidden"><input id="eUpdatedAt" type="hidden"><label>Date *<input id="eDate" type="date" required></label><label>Type *<select id="eType" required><option value="inflow">Money In</option><option value="outflow">Money Out</option></select></label><label>Amount (₹) *<input id="eAmount" type="number" min="0.01" max="999999999999.99" step="0.01" required inputmode="decimal"></label><label>Category *<input id="eCategory" maxlength="80" required></label><label>Payment method *<input id="eMethod" maxlength="40" required></label><label>Reference / UTR *<input id="eReference" maxlength="120" required></label><label class="full">Purpose *<textarea id="ePurpose" rows="3" maxlength="500" required></textarea></label><div class="full modal-actions"><button id="cancelEdit" class="secondary-btn" type="button">Cancel</button><button class="primary-btn" type="submit">Save changes</button></div></form></div></div>
+
+<script src="finance-utils.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
